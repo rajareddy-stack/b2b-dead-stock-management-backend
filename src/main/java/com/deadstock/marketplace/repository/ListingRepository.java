@@ -19,14 +19,14 @@ public interface ListingRepository extends JpaRepository<Listing, Long> {
     List<Listing> findByCategoryAndStatusOrderByCreatedAtDesc(Category category, ListingStatus status);
 
     @Query("SELECT l FROM Listing l WHERE l.status = :status AND " +
-           "(:categoryId IS NULL OR l.category.id = :categoryId) AND " +
-           "(:location IS NULL OR LOWER(l.location) LIKE LOWER(CONCAT('%', :location, '%'))) AND " +
-           "(:query IS NULL OR LOWER(l.title) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(l.description) LIKE LOWER(CONCAT('%', :query, '%'))) " +
+           "(:categoryId = 0 OR l.category.id = :categoryId) AND " +
+           "LOWER(l.location) LIKE LOWER(:locationPattern) AND " +
+           "(LOWER(l.title) LIKE LOWER(:queryPattern) OR LOWER(l.description) LIKE LOWER(:queryPattern)) " +
            "ORDER BY l.createdAt DESC")
     List<Listing> searchListings(@Param("status") ListingStatus status,
                                  @Param("categoryId") Long categoryId,
-                                 @Param("location") String location,
-                                 @Param("query") String query);
+                                 @Param("locationPattern") String locationPattern,
+                                 @Param("queryPattern") String queryPattern);
 
     long countByStatus(ListingStatus status);
 

@@ -12,6 +12,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
@@ -40,6 +41,13 @@ class DeadStockApplicationTests {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("\"featuredListings\"")))
                 .andExpect(content().string(containsString("\"categories\"")));
+    }
+
+    @Test
+    void publicApiSearchesListingsWithoutFilters() throws Exception {
+        mockMvc.perform(get("/api/listings"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray());
     }
 
     @Test

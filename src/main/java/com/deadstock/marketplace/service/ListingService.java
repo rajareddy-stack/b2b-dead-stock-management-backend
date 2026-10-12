@@ -29,9 +29,14 @@ public class ListingService {
     }
 
     public List<Listing> searchListings(Long categoryId, String location, String query) {
-        String locParam = (location != null && !location.trim().isEmpty()) ? location.trim() : null;
-        String queryParam = (query != null && !query.trim().isEmpty()) ? query.trim() : null;
-        return listingRepository.searchListings(ListingStatus.AVAILABLE, categoryId, locParam, queryParam);
+        long categoryParam = categoryId == null ? 0L : categoryId;
+        String locationPattern = pattern(location);
+        String queryPattern = pattern(query);
+        return listingRepository.searchListings(ListingStatus.AVAILABLE, categoryParam, locationPattern, queryPattern);
+    }
+
+    private String pattern(String value) {
+        return value == null || value.isBlank() ? "%" : "%" + value.trim() + "%";
     }
 
     public List<Listing> getListingsBySeller(User seller) {
