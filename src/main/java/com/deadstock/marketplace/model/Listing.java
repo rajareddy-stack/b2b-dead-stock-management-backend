@@ -7,7 +7,9 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name = "listings")
@@ -54,6 +56,11 @@ public class Listing {
 
     @Column(name = "image_url", length = 500)
     private String imageUrl;
+
+    @ElementCollection
+    @CollectionTable(name = "listing_tags", joinColumns = @JoinColumn(name = "listing_id"))
+    @Column(name = "tag", nullable = false, length = 32)
+    private Set<String> tags = new LinkedHashSet<>();
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
@@ -194,6 +201,14 @@ public class Listing {
 
     public void setImageUrl(String imageUrl) {
         this.imageUrl = imageUrl;
+    }
+
+    public Set<String> getTags() {
+        return tags;
+    }
+
+    public void setTags(Set<String> tags) {
+        this.tags = tags == null ? new LinkedHashSet<>() : new LinkedHashSet<>(tags);
     }
 
     public ListingStatus getStatus() {

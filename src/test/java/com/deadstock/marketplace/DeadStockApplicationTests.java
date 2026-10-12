@@ -2,6 +2,9 @@ package com.deadstock.marketplace;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import com.deadstock.marketplace.repository.CategoryRepository;
+import com.deadstock.marketplace.repository.ListingReportRepository;
+import com.deadstock.marketplace.repository.ListingRepository;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
@@ -11,6 +14,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -22,6 +27,15 @@ class DeadStockApplicationTests {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private CategoryRepository categoryRepository;
+
+    @Autowired
+    private ListingRepository listingRepository;
+
+    @Autowired
+    private ListingReportRepository listingReportRepository;
 
     @Test
     void contextLoads() {
@@ -48,6 +62,69 @@ class DeadStockApplicationTests {
         mockMvc.perform(get("/api/listings"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray());
+    }
+
+    @Test
+    void publicApiSearchesListingsByCityOrState() throws Exception {
+        mockMvc.perform(get("/api/listings").param("location", "Maharashtra"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Nashik")));
+    }
+
+    @Test
+    @WithUserDetails("seller@metrosteel.com")
+    void listingTagsCanBeCreatedAndFoundByKeyword() throws Exception {
+        Long categoryId = categoryRepository.findAll().get(0).getId();
+        mockMvc.perform(post("/api/listings")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "title": "Tag search regression lot",
+                                  "description": "Surplus material for test coverage.",
+                                  "categoryId": %d,
+                                  "originalPrice": 200,
+                                  "price": 100,
+                                  "quantity": 5,
+                                  "unit": "Pieces",
+                                  "condition": "BRAND_NEW_SURPLUS",
+                                  "location": "Pune, Maharashtra",
+                                  "tags": ["regression-tag-2026"]
+                                }
+                                """.formatted(categoryId)))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/listings").param("query", "regression-tag-2026"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].title").value("Tag search regression lot"))
+                .andExpect(jsonPath("$[0].tags[0]").value("Regression-tag-2026"));
+    }
+
+    @Test
+    @WithUserDetails("buyer@apexbuild.com")
+    void buyerCanReportAnotherBusinessesActiveListing() throws Exception {
+        Long listingId = listingRepository.findAll().get(0).getId();
+        String report = """
+                {"reason":"The listing details do not match the photos."}
+                """;
+        mockMvc.perform(post("/api/listings/{id}/reports", listingId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(report))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value("PENDING"));
+
+        mockMvc.perform(post("/api/listings/{id}/reports", listingId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(report))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(containsString("pending report")));
+
+        Long reportId = listingReportRepository.findAll().get(0).getId();
+        mockMvc.perform(get("/api/admin/reports").with(user("moderator").roles("ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].reason").value("The listing details do not match the photos."));
+        mockMvc.perform(put("/api/admin/reports/{id}/dismiss", reportId)
+                        .with(user("moderator").roles("ADMIN")))
+                .andExpect(status().isNoContent());
     }
 
     @Test

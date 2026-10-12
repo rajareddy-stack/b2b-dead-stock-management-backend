@@ -5,6 +5,7 @@ import com.deadstock.marketplace.dto.ListingForm;
 import com.deadstock.marketplace.model.BusinessProfile;
 import com.deadstock.marketplace.model.Category;
 import com.deadstock.marketplace.model.Listing;
+import com.deadstock.marketplace.model.ListingReport;
 import com.deadstock.marketplace.model.Notification;
 import com.deadstock.marketplace.model.Offer;
 import com.deadstock.marketplace.model.User;
@@ -13,6 +14,7 @@ import com.deadstock.marketplace.model.enums.OfferStatus;
 import com.deadstock.marketplace.service.AdminService;
 import com.deadstock.marketplace.service.CategoryService;
 import com.deadstock.marketplace.service.ListingService;
+import com.deadstock.marketplace.service.ListingReportService;
 import com.deadstock.marketplace.service.NotificationService;
 import com.deadstock.marketplace.service.OfferService;
 import com.deadstock.marketplace.service.UserService;
@@ -40,6 +42,7 @@ public class MarketplaceApiController {
     private final AdminService adminService;
     private final CategoryService categoryService;
     private final ListingService listingService;
+    private final ListingReportService listingReportService;
     private final NotificationService notificationService;
     private final OfferService offerService;
     private final UserService userService;
@@ -47,12 +50,14 @@ public class MarketplaceApiController {
     public MarketplaceApiController(AdminService adminService,
                                     CategoryService categoryService,
                                     ListingService listingService,
+                                    ListingReportService listingReportService,
                                     NotificationService notificationService,
                                     OfferService offerService,
                                     UserService userService) {
         this.adminService = adminService;
         this.categoryService = categoryService;
         this.listingService = listingService;
+        this.listingReportService = listingReportService;
         this.notificationService = notificationService;
         this.offerService = offerService;
         this.userService = userService;
@@ -218,6 +223,46 @@ public class MarketplaceApiController {
         }
     }
 
+    @PostMapping("/listings/{id}/reports")
+    @PreAuthorize("hasAnyRole('BUYER', 'SELLER')")
+    public ResponseEntity<?> reportListing(@PathVariable Long id, @Valid @RequestBody ListingReportForm form) {
+        try {
+            ListingReport report = listingReportService.reportListing(id, requireCurrentUser(), form.reason());
+            return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("id", report.getId(), "status", report.getStatus()));
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/admin/reports")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> pendingListingReports() {
+        return listingReportService.getPendingReports().stream().map(this::reportView).toList();
+    }
+
+    @PutMapping("/admin/reports/{id}/dismiss")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> dismissListingReport(@PathVariable Long id) {
+        try {
+            listingReportService.dismissReport(id);
+            return ResponseEntity.noContent().build();
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PutMapping("/admin/reports/{id}/delist")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> delistReportedListing(@PathVariable Long id) {
+        try {
+            listingReportService.delistReportedListing(id);
+            return ResponseEntity.noContent().build();
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
     private User requireCurrentUser() {
         User user = userService.getCurrentUser();
         if (user == null) {
@@ -278,6 +323,7 @@ public class MarketplaceApiController {
         view.put("status", listing.getStatus());
         view.put("location", listing.getLocation());
         view.put("imageUrl", listing.getImageUrl());
+        view.put("tags", listing.getTags());
         view.put("createdAt", listing.getCreatedAt());
         view.put("discountPercentage", listing.getDiscountPercentage());
         view.put("category", listing.getCategory());
@@ -285,6 +331,18 @@ public class MarketplaceApiController {
         if (seller != null) {
             view.put("seller", Map.of("id", seller.getId(), "fullName", seller.getFullName(), "email", seller.getEmail()));
         }
+        return view;
+    }
+
+    private Map<String, Object> reportView(ListingReport report) {
+        Map<String, Object> view = new LinkedHashMap<>();
+        view.put("id", report.getId());
+        view.put("reason", report.getReason());
+        view.put("status", report.getStatus());
+        view.put("createdAt", report.getCreatedAt());
+        view.put("listing", listingView(report.getListing()));
+        User reporter = report.getReporter();
+        view.put("reporter", Map.of("id", reporter.getId(), "fullName", reporter.getFullName(), "email", reporter.getEmail()));
         return view;
     }
 
@@ -342,5 +400,9 @@ public class MarketplaceApiController {
             String postalCode,
             @NotBlank String phone,
             String industryType) {
+    }
+
+    public record ListingReportForm(
+            @NotBlank @jakarta.validation.constraints.Size(max = 1000) String reason) {
     }
 }

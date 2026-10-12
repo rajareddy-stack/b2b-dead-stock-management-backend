@@ -7,20 +7,26 @@ import com.deadstock.marketplace.model.User;
 import com.deadstock.marketplace.model.enums.ListingStatus;
 import com.deadstock.marketplace.repository.CategoryRepository;
 import com.deadstock.marketplace.repository.ListingRepository;
+import com.deadstock.marketplace.repository.ListingReportRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.LinkedHashSet;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class ListingService {
 
     private final ListingRepository listingRepository;
+    private final ListingReportRepository listingReportRepository;
     private final CategoryRepository categoryRepository;
 
-    public ListingService(ListingRepository listingRepository, CategoryRepository categoryRepository) {
+    public ListingService(ListingRepository listingRepository, ListingReportRepository listingReportRepository, CategoryRepository categoryRepository) {
         this.listingRepository = listingRepository;
+        this.listingReportRepository = listingReportRepository;
         this.categoryRepository = categoryRepository;
     }
 
@@ -37,6 +43,17 @@ public class ListingService {
 
     private String pattern(String value) {
         return value == null || value.isBlank() ? "%" : "%" + value.trim() + "%";
+    }
+
+    private Set<String> normalizeTags(List<String> tags) {
+        if (tags == null) {
+            return new LinkedHashSet<>();
+        }
+        return tags.stream()
+                .filter(tag -> tag != null && !tag.isBlank())
+                .map(String::trim)
+                .map(tag -> tag.substring(0, 1).toUpperCase() + tag.substring(1))
+                .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
     public List<Listing> getListingsBySeller(User seller) {
@@ -69,6 +86,7 @@ public class ListingService {
                 form.getLocation(),
                 image
         );
+        listing.setTags(normalizeTags(form.getTags()));
 
         return listingRepository.save(listing);
     }
@@ -94,6 +112,7 @@ public class ListingService {
         listing.setUnit(form.getUnit());
         listing.setCondition(form.getCondition());
         listing.setLocation(form.getLocation());
+        listing.setTags(normalizeTags(form.getTags()));
         if (form.getImageUrl() != null && !form.getImageUrl().trim().isEmpty()) {
             listing.setImageUrl(form.getImageUrl());
         }
@@ -110,7 +129,12 @@ public class ListingService {
             throw new org.springframework.security.access.AccessDeniedException("Unauthorized to delete this listing");
         }
 
-        listingRepository.delete(listing);
+        if (listingReportRepository.existsByListing_Id(id)) {
+            listing.setStatus(ListingStatus.DELISTED);
+            listingRepository.save(listing);
+        } else {
+            listingRepository.delete(listing);
+        }
     }
 
     @Transactional

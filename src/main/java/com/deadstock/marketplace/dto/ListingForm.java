@@ -5,7 +5,10 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ListingForm {
 
@@ -42,6 +45,9 @@ public class ListingForm {
     private String location;
 
     private String imageUrl;
+
+    @Size(max = 10, message = "A listing can have at most 10 tags")
+    private List<@NotBlank @Size(max = 32) String> tags = new ArrayList<>();
 
     public ListingForm() {
     }
@@ -132,5 +138,13 @@ public class ListingForm {
 
     public void setImageUrl(String imageUrl) {
         this.imageUrl = imageUrl;
+    }
+
+    public List<String> getTags() {
+        return tags;
+    }
+
+    public void setTags(List<String> tags) {
+        this.tags = tags == null ? new ArrayList<>() : tags;
     }
 }

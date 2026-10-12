@@ -12,15 +12,19 @@ import java.util.List;
 public class NotificationService {
 
     private final NotificationRepository notificationRepository;
+    private final EmailNotificationService emailNotificationService;
 
-    public NotificationService(NotificationRepository notificationRepository) {
+    public NotificationService(NotificationRepository notificationRepository, EmailNotificationService emailNotificationService) {
         this.notificationRepository = notificationRepository;
+        this.emailNotificationService = emailNotificationService;
     }
 
     @Transactional
     public Notification sendNotification(User recipient, String title, String message, String linkUrl) {
         Notification notification = new Notification(recipient, title, message, linkUrl);
-        return notificationRepository.save(notification);
+        Notification saved = notificationRepository.save(notification);
+        emailNotificationService.send(recipient, title, message, linkUrl);
+        return saved;
     }
 
     public List<Notification> getNotificationsForUser(User user) {

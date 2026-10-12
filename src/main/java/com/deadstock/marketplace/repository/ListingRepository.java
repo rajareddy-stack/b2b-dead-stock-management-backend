@@ -18,10 +18,11 @@ public interface ListingRepository extends JpaRepository<Listing, Long> {
     List<Listing> findByStatusOrderByCreatedAtDesc(ListingStatus status);
     List<Listing> findByCategoryAndStatusOrderByCreatedAtDesc(Category category, ListingStatus status);
 
-    @Query("SELECT l FROM Listing l WHERE l.status = :status AND " +
+    @Query("SELECT DISTINCT l FROM Listing l LEFT JOIN l.tags tag WHERE l.status = :status AND " +
            "(:categoryId = 0 OR l.category.id = :categoryId) AND " +
            "LOWER(l.location) LIKE LOWER(:locationPattern) AND " +
-           "(LOWER(l.title) LIKE LOWER(:queryPattern) OR LOWER(l.description) LIKE LOWER(:queryPattern)) " +
+           "(LOWER(l.title) LIKE LOWER(:queryPattern) OR LOWER(l.description) LIKE LOWER(:queryPattern) " +
+           "OR LOWER(tag) LIKE LOWER(:queryPattern)) " +
            "ORDER BY l.createdAt DESC")
     List<Listing> searchListings(@Param("status") ListingStatus status,
                                  @Param("categoryId") Long categoryId,
