@@ -72,6 +72,11 @@
             <artifactId>mysql-connector-j</artifactId>
             <scope>runtime</scope>
         </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
 
         <!-- OpenAPI / Swagger Documentation -->
         <dependency>
@@ -97,9 +102,6 @@
         <resources>
             <resource>
                 <directory>src/main/resources</directory>
-            </resource>
-            <resource>
-                <directory>${project.basedir}/../frontend/src/main/resources</directory>
             </resource>
         </resources>
         <plugins>

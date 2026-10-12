@@ -32,6 +32,9 @@ public class UserService {
 
     @Transactional
     public User registerUser(RegisterRequest request) {
+        if (request.getRole() == null || request.getRole() == Role.ADMIN) {
+            throw new IllegalArgumentException("Only buyer and seller accounts can be registered");
+        }
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new IllegalArgumentException("An account with this email already exists: " + request.getEmail());
         }

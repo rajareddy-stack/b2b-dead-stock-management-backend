@@ -1,0 +1,45 @@
+databases:
+  - name: b2b-dead-stock-db
+    databaseName: deadstock_db
+    user: deadstock_user
+    plan: free
+    region: singapore
+
+services:
+  - type: web
+    name: b2b-dead-stock-api
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/public/overview
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: production
+      - key: DB_HOST
+        fromDatabase:
+          name: b2b-dead-stock-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: b2b-dead-stock-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: b2b-dead-stock-db
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: b2b-dead-stock-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: b2b-dead-stock-db
+          property: password
+      - key: INITIAL_ADMIN_EMAIL
+        sync: false
+      - key: INITIAL_ADMIN_PASSWORD
+        sync: false
+      - key: INITIAL_ADMIN_FULL_NAME
+        sync: false

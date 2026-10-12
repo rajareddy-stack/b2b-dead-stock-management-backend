@@ -4,6 +4,7 @@ import com.deadstock.marketplace.model.*;
 import com.deadstock.marketplace.model.enums.*;
 import com.deadstock.marketplace.repository.*;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
@@ -11,6 +12,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 @Component
+@Profile("!production")
 public class DataInitializer implements CommandLineRunner {
 
     private final UserRepository userRepository;

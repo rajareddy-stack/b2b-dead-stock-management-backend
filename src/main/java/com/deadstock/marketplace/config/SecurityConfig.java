@@ -77,6 +77,7 @@ public class SecurityConfig {
                     "/login", "/register", "/error",
                     "/api/auth", "/api/auth/**",
                     "/api/listings", "/api/listings/**",
+                    "/api/public/**", "/api/categories", "/api/locations",
                     "/h2-console/**",
                     "/swagger-ui", "/swagger-ui/**", "/v3/api-docs", "/v3/api-docs/**", "/swagger-ui.html",
                     "/css/**", "/js/**", "/images/**", "/webjars/**"

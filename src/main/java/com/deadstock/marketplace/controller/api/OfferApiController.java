@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -30,6 +31,7 @@ public class OfferApiController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('BUYER')")
     @Operation(summary = "Submit purchase offer / negotiation proposal")
     public ResponseEntity<?> submitOffer(@Valid @RequestBody OfferForm form) {
         User currentUser = userService.getCurrentUser();
@@ -50,6 +52,7 @@ public class OfferApiController {
     }
 
     @PostMapping("/{id}/counter")
+    @PreAuthorize("hasRole('SELLER')")
     @Operation(summary = "Seller proposes counter-offer price")
     public ResponseEntity<?> counterOffer(@PathVariable Long id, @Valid @RequestBody CounterOfferForm form) {
         User currentUser = userService.getCurrentUser();
@@ -66,6 +69,7 @@ public class OfferApiController {
     }
 
     @PostMapping("/{id}/accept")
+    @PreAuthorize("hasAnyRole('BUYER', 'SELLER')")
     @Operation(summary = "Accept negotiation offer and confirm deal")
     public ResponseEntity<?> acceptOffer(@PathVariable Long id) {
         User currentUser = userService.getCurrentUser();
@@ -90,6 +94,7 @@ public class OfferApiController {
     }
 
     @PostMapping("/{id}/reject")
+    @PreAuthorize("hasAnyRole('BUYER', 'SELLER')")
     @Operation(summary = "Decline/reject offer")
     public ResponseEntity<?> rejectOffer(@PathVariable Long id) {
         User currentUser = userService.getCurrentUser();

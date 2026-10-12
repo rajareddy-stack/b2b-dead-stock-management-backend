@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -47,6 +48,7 @@ public class ListingApiController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('SELLER')")
     @Operation(summary = "Create a new dead stock listing (Requires authenticated seller)")
     public ResponseEntity<?> createListing(@Valid @RequestBody ListingForm form) {
         User currentUser = userService.getCurrentUser();

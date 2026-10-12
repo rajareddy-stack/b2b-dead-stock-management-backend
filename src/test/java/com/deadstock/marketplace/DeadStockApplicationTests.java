@@ -4,11 +4,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithUserDetails;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
@@ -22,6 +24,44 @@ class DeadStockApplicationTests {
 
     @Test
     void contextLoads() {
+    }
+
+    @Test
+    void homePageRendersListingImagesWithLocalFallbacks() throws Exception {
+        mockMvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("/images/listing-placeholder.svg")))
+                .andExpect(content().string(containsString("class=\"listing-meta")));
+    }
+
+    @Test
+    void publicApiProvidesMarketplaceOverview() throws Exception {
+        mockMvc.perform(get("/api/public/overview"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("\"featuredListings\"")))
+                .andExpect(content().string(containsString("\"categories\"")));
+    }
+
+    @Test
+    void registrationDoesNotAllowAdminRole() throws Exception {
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "email": "untrusted-admin@example.com",
+                                  "password": "safe-password",
+                                  "fullName": "Untrusted Admin",
+                                  "role": "ADMIN",
+                                  "companyName": "Example",
+                                  "taxId": "EXAMPLE-123",
+                                  "address": "1 Main Street",
+                                  "city": "Mumbai",
+                                  "state": "Maharashtra",
+                                  "phone": "1234567890"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(containsString("Only buyer and seller accounts can be registered")));
     }
 
     @Test
