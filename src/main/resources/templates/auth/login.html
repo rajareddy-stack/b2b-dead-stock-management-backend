@@ -40,22 +40,6 @@
                     </button>
                 </form>
 
-                <!-- Demo quick login helper buttons for instant grading/testing -->
-                <div class="mt-4 pt-3 border-top text-center">
-                    <p class="small text-muted mb-2 fw-semibold">Quick Demo Login (Pre-configured Test Accounts):</p>
-                    <div class="d-flex flex-wrap gap-2 justify-content-center">
-                        <button type="button" class="btn btn-sm btn-outline-warning text-dark" onclick="fillLogin('seller@metrosteel.com', 'password123')">
-                            <i class="bi bi-shop me-1"></i> Seller Demo
-                        </button>
-                        <button type="button" class="btn btn-sm btn-outline-info text-dark" onclick="fillLogin('buyer@apexbuild.com', 'password123')">
-                            <i class="bi bi-cart-check me-1"></i> Buyer Demo
-                        </button>
-                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="fillLogin('admin@deadstock.com', 'password123')">
-                            <i class="bi bi-shield-lock me-1"></i> Admin Demo
-                        </button>
-                    </div>
-                </div>
-
                 <div class="mt-4 text-center small text-muted">
                     Don't have a business account? 
                     <a th:href="@{/register}" class="fw-semibold text-primary text-decoration-none">Register here</a>
@@ -67,13 +51,6 @@
 
 <div th:replace="~{layout/base :: footer}"></div>
 <div th:replace="~{layout/base :: scripts}"></div>
-
-<script>
-    function fillLogin(email, password) {
-        document.getElementById('email').value = email;
-        document.getElementById('password').value = password;
-    }
-</script>
 
 </body>
 </html>
