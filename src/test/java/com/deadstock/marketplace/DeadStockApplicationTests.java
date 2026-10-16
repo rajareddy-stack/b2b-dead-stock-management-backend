@@ -5,11 +5,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import com.deadstock.marketplace.repository.CategoryRepository;
 import com.deadstock.marketplace.repository.ListingReportRepository;
 import com.deadstock.marketplace.repository.ListingRepository;
+import com.deadstock.marketplace.model.BusinessProfile;
+import com.deadstock.marketplace.model.Listing;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithUserDetails;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -50,18 +53,51 @@ class DeadStockApplicationTests {
     }
 
     @Test
+    @Transactional
+    void publicListingPageDoesNotExposeSellerLegalOrDirectContactDetails() throws Exception {
+        Listing listing = listingRepository.findAll().get(0);
+        BusinessProfile profile = listing.getSeller().getBusinessProfile();
+        mockMvc.perform(get("/listings/{id}", listing.getId()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString(profile.getCompanyName().replace("&", "&amp;"))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString(profile.getTaxId()))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString(profile.getAddress()))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString(profile.getPhone()))));
+    }
+
+    @Test
     void publicApiProvidesMarketplaceOverview() throws Exception {
         mockMvc.perform(get("/api/public/overview"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("\"featuredListings\"")))
-                .andExpect(content().string(containsString("\"categories\"")));
+                .andExpect(content().string(containsString("\"categories\"")))
+                .andExpect(jsonPath("$.featuredListings[0].seller.businessProfile.companyName").exists())
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString("\"taxId\""))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString("\"postalCode\""))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString("\"phone\""))));
     }
 
     @Test
     void publicApiSearchesListingsWithoutFilters() throws Exception {
         mockMvc.perform(get("/api/listings"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray());
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].seller.businessProfile.companyName").exists())
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString("\"email\""))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString("\"taxId\""))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString("\"address\""))));
+    }
+
+    @Test
+    void publicListingDetailOmitsSellerContactAndLegalInformation() throws Exception {
+        Long listingId = listingRepository.findAll().get(0).getId();
+        mockMvc.perform(get("/api/listings/{id}", listingId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.seller.businessProfile.companyName").exists())
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString("\"email\""))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString("\"taxId\""))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString("\"address\""))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString("\"phone\""))));
     }
 
     @Test
@@ -97,6 +133,56 @@ class DeadStockApplicationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].title").value("Tag search regression lot"))
                 .andExpect(jsonPath("$[0].tags[0]").value("Regression-tag-2026"));
+    }
+
+    @Test
+    @WithUserDetails("seller@metrosteel.com")
+    void bulkIntakeRejectsDuplicateSkusBeforeCreatingAnyRows() throws Exception {
+        Long categoryId = categoryRepository.findAll().get(0).getId();
+        long existingListings = listingRepository.count();
+        String payload = """
+                [
+                  {
+                    "sku":"BULK-DUP-01","title":"Bulk lot one","description":"Validated lot",
+                    "categoryId":%d,"originalPrice":100,"price":75,"quantity":2,"unit":"Units",
+                    "condition":"BRAND_NEW_SURPLUS","location":"Pune, Maharashtra"
+                  },
+                  {
+                    "sku":"bulk-dup-01","title":"Bulk lot two","description":"Duplicate SKU",
+                    "categoryId":%d,"originalPrice":100,"price":75,"quantity":2,"unit":"Units",
+                    "condition":"BRAND_NEW_SURPLUS","location":"Pune, Maharashtra"
+                  }
+                ]
+                """.formatted(categoryId, categoryId);
+        mockMvc.perform(post("/api/listings/bulk")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(containsString("Duplicate SKU")));
+        org.junit.jupiter.api.Assertions.assertEquals(existingListings, listingRepository.count());
+    }
+
+    @Test
+    @WithUserDetails("seller@metrosteel.com")
+    void listingIntakeRejectsUnsafeImageSchemes() throws Exception {
+        Long categoryId = categoryRepository.findAll().get(0).getId();
+        mockMvc.perform(post("/api/listings")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "title": "Unsafe image URL lot",
+                                  "description": "The image scheme must be restricted.",
+                                  "categoryId": %d,
+                                  "originalPrice": 200,
+                                  "price": 100,
+                                  "quantity": 5,
+                                  "unit": "Pieces",
+                                  "condition": "BRAND_NEW_SURPLUS",
+                                  "location": "Pune, Maharashtra",
+                                  "imageUrl": "javascript:alert(1)"
+                                }
+                                """.formatted(categoryId)))
+                .andExpect(status().isBadRequest());
     }
 
     @Test

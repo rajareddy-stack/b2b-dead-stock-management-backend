@@ -4,12 +4,14 @@ import com.deadstock.marketplace.model.Category;
 import com.deadstock.marketplace.repository.CategoryRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 
 @Component
 @Profile("production")
+@Order(1)
 public class ProductionCatalogInitializer implements CommandLineRunner {
 
     private final CategoryRepository categoryRepository;

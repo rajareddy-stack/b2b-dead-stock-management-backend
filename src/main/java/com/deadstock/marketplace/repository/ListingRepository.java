@@ -14,6 +14,9 @@ import java.util.List;
 
 @Repository
 public interface ListingRepository extends JpaRepository<Listing, Long> {
+    boolean existsBySku(String sku);
+    boolean existsBySkuAndIdNot(String sku, Long id);
+
     List<Listing> findBySellerOrderByCreatedAtDesc(User seller);
     List<Listing> findByStatusOrderByCreatedAtDesc(ListingStatus status);
     List<Listing> findByCategoryAndStatusOrderByCreatedAtDesc(Category category, ListingStatus status);

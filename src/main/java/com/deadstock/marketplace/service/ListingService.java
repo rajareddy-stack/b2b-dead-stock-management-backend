@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.LinkedHashSet;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -28,6 +29,19 @@ public class ListingService {
         this.listingRepository = listingRepository;
         this.listingReportRepository = listingReportRepository;
         this.categoryRepository = categoryRepository;
+    }
+
+    private String normalizeSku(String sku) {
+        if (sku == null || sku.isBlank()) {
+            throw new IllegalArgumentException("SKU is required");
+        }
+        return sku.trim().toUpperCase();
+    }
+
+    private String resolveSku(String sku) {
+        return sku == null || sku.isBlank()
+                ? "LOT-" + UUID.randomUUID().toString().substring(0, 12).toUpperCase()
+                : normalizeSku(sku);
     }
 
     public List<Listing> getAllActiveListings() {
@@ -86,9 +100,32 @@ public class ListingService {
                 form.getLocation(),
                 image
         );
+        listing.setSku(resolveSku(form.getSku()));
+        listing.setExpiryDate(form.getExpiryDate());
         listing.setTags(normalizeTags(form.getTags()));
 
         return listingRepository.save(listing);
+    }
+
+    @Transactional
+    public List<Listing> createListings(List<ListingForm> forms, User seller) {
+        if (forms == null || forms.isEmpty() || forms.size() > 100) {
+            throw new IllegalArgumentException("Bulk intake requires between 1 and 100 listings");
+        }
+        Set<String> skus = new LinkedHashSet<>();
+        for (ListingForm form : forms) {
+            if (form.getSku() == null || form.getSku().isBlank()) {
+                throw new IllegalArgumentException("Each imported listing must have a SKU");
+            }
+            String sku = normalizeSku(form.getSku());
+            if (!skus.add(sku)) {
+                throw new IllegalArgumentException("Duplicate SKU in import: " + sku);
+            }
+            if (listingRepository.existsBySku(sku)) {
+                throw new IllegalArgumentException("SKU already exists: " + sku);
+            }
+        }
+        return forms.stream().map(form -> createListing(form, seller)).toList();
     }
 
     @Transactional
@@ -98,6 +135,10 @@ public class ListingService {
 
         if (!listing.getSeller().getId().equals(seller.getId())) {
             throw new org.springframework.security.access.AccessDeniedException("Unauthorized to modify this listing");
+        }
+        if (form.getSku() != null && !form.getSku().isBlank()
+                && listingRepository.existsBySkuAndIdNot(normalizeSku(form.getSku()), id)) {
+            throw new IllegalArgumentException("SKU already exists: " + normalizeSku(form.getSku()));
         }
 
         Category category = categoryRepository.findById(form.getCategoryId())
@@ -112,6 +153,10 @@ public class ListingService {
         listing.setUnit(form.getUnit());
         listing.setCondition(form.getCondition());
         listing.setLocation(form.getLocation());
+        if (form.getSku() != null && !form.getSku().isBlank()) {
+            listing.setSku(normalizeSku(form.getSku()));
+        }
+        listing.setExpiryDate(form.getExpiryDate());
         listing.setTags(normalizeTags(form.getTags()));
         if (form.getImageUrl() != null && !form.getImageUrl().trim().isEmpty()) {
             listing.setImageUrl(form.getImageUrl());

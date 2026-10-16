@@ -5,6 +5,7 @@ import com.deadstock.marketplace.model.enums.ListingStatus;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -32,6 +33,9 @@ public class Listing {
     @Column(nullable = false, length = 200)
     private String title;
 
+    @Column(name = "sku", unique = true, length = 64)
+    private String sku;
+
     @Column(columnDefinition = "TEXT", nullable = false)
     private String description;
 
@@ -56,6 +60,9 @@ public class Listing {
 
     @Column(name = "image_url", length = 500)
     private String imageUrl;
+
+    @Column(name = "expiry_date")
+    private LocalDate expiryDate;
 
     @ElementCollection
     @CollectionTable(name = "listing_tags", joinColumns = @JoinColumn(name = "listing_id"))
@@ -139,6 +146,14 @@ public class Listing {
         this.title = title;
     }
 
+    public String getSku() {
+        return sku;
+    }
+
+    public void setSku(String sku) {
+        this.sku = sku;
+    }
+
     public String getDescription() {
         return description;
     }
@@ -201,6 +216,14 @@ public class Listing {
 
     public void setImageUrl(String imageUrl) {
         this.imageUrl = imageUrl;
+    }
+
+    public LocalDate getExpiryDate() {
+        return expiryDate;
+    }
+
+    public void setExpiryDate(LocalDate expiryDate) {
+        this.expiryDate = expiryDate;
     }
 
     public Set<String> getTags() {

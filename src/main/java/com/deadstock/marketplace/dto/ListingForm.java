@@ -2,11 +2,14 @@ package com.deadstock.marketplace.dto;
 
 import com.deadstock.marketplace.model.enums.ItemCondition;
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -15,9 +18,15 @@ public class ListingForm {
     private Long id;
 
     @NotBlank(message = "Title is required")
+    @Size(max = 200)
     private String title;
 
+    @Size(max = 64)
+    @Pattern(regexp = "[A-Za-z0-9._/-]+", message = "SKU may only contain letters, digits, dots, underscores, slashes, and hyphens")
+    private String sku;
+
     @NotBlank(message = "Description is required")
+    @Size(max = 5000)
     private String description;
 
     @NotNull(message = "Category is required")
@@ -25,10 +34,12 @@ public class ListingForm {
 
     @NotNull(message = "Original retail price is required")
     @DecimalMin(value = "0.01", message = "Original price must be greater than 0")
+    @Digits(integer = 10, fraction = 2)
     private BigDecimal originalPrice;
 
     @NotNull(message = "Discounted surplus price is required")
     @DecimalMin(value = "0.01", message = "Discounted price must be greater than 0")
+    @Digits(integer = 10, fraction = 2)
     private BigDecimal price;
 
     @NotNull(message = "Available quantity is required")
@@ -36,15 +47,21 @@ public class ListingForm {
     private Integer quantity;
 
     @NotBlank(message = "Unit of measurement is required (e.g. kg, pieces, meters, pallets)")
+    @Size(max = 30)
     private String unit;
 
     @NotNull(message = "Item condition is required")
     private ItemCondition condition;
 
     @NotBlank(message = "Pickup location (City, State) is required")
+    @Size(max = 150)
     private String location;
 
+    @Size(max = 500)
+    @Pattern(regexp = "^https?://[^\\s]+$", message = "Image URL must use HTTP or HTTPS")
     private String imageUrl;
+
+    private LocalDate expiryDate;
 
     @Size(max = 10, message = "A listing can have at most 10 tags")
     private List<@NotBlank @Size(max = 32) String> tags = new ArrayList<>();
@@ -66,6 +83,14 @@ public class ListingForm {
 
     public void setTitle(String title) {
         this.title = title;
+    }
+
+    public String getSku() {
+        return sku;
+    }
+
+    public void setSku(String sku) {
+        this.sku = sku;
     }
 
     public String getDescription() {
@@ -138,6 +163,14 @@ public class ListingForm {
 
     public void setImageUrl(String imageUrl) {
         this.imageUrl = imageUrl;
+    }
+
+    public LocalDate getExpiryDate() {
+        return expiryDate;
+    }
+
+    public void setExpiryDate(LocalDate expiryDate) {
+        this.expiryDate = expiryDate;
     }
 
     public List<String> getTags() {

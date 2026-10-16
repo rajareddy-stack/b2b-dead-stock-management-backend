@@ -2,6 +2,7 @@ package com.deadstock.marketplace.controller.api;
 
 import com.deadstock.marketplace.dto.AdminStatsDto;
 import com.deadstock.marketplace.dto.ListingForm;
+import com.deadstock.marketplace.dto.PublicListingView;
 import com.deadstock.marketplace.model.BusinessProfile;
 import com.deadstock.marketplace.model.Category;
 import com.deadstock.marketplace.model.Listing;
@@ -84,7 +85,7 @@ public class MarketplaceApiController {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("stats", statsView(adminService.getAdminStats()));
         result.put("categories", categoryService.getAllCategories());
-        result.put("featuredListings", featured.stream().map(this::listingView).toList());
+        result.put("featuredListings", featured.stream().map(PublicListingView::from).toList());
         return result;
     }
 
@@ -314,6 +315,7 @@ public class MarketplaceApiController {
         Map<String, Object> view = new LinkedHashMap<>();
         view.put("id", listing.getId());
         view.put("title", listing.getTitle());
+        view.put("sku", listing.getSku());
         view.put("description", listing.getDescription());
         view.put("originalPrice", listing.getOriginalPrice());
         view.put("price", listing.getPrice());
@@ -323,13 +325,21 @@ public class MarketplaceApiController {
         view.put("status", listing.getStatus());
         view.put("location", listing.getLocation());
         view.put("imageUrl", listing.getImageUrl());
+        view.put("expiryDate", listing.getExpiryDate());
         view.put("tags", listing.getTags());
         view.put("createdAt", listing.getCreatedAt());
         view.put("discountPercentage", listing.getDiscountPercentage());
         view.put("category", listing.getCategory());
         User seller = listing.getSeller();
         if (seller != null) {
-            view.put("seller", Map.of("id", seller.getId(), "fullName", seller.getFullName(), "email", seller.getEmail()));
+            Map<String, Object> sellerView = new LinkedHashMap<>();
+            sellerView.put("id", seller.getId());
+            sellerView.put("fullName", seller.getFullName());
+            sellerView.put("email", seller.getEmail());
+            if (seller.getBusinessProfile() != null) {
+                sellerView.put("businessProfile", businessView(seller.getBusinessProfile()));
+            }
+            view.put("seller", sellerView);
         }
         return view;
     }
